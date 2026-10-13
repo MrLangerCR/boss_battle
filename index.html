@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Guesser: Boss Battle</title>
+<style>
+  :root{--navy:#14213D;--navy2:#1E2F55;--teal:#2EC4B6;--amber:#FFB703;--light:#FBFBF8;--red:#EB4646;--green:#3CC86E;--soft:#BFD8D5}
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:radial-gradient(ellipse at 50% 20%,#24396b 0%,var(--navy) 60%);color:var(--light);font-family:'Nunito Sans','Segoe UI',Arial,sans-serif}
+  .stage{height:100%;display:flex;flex-direction:column;padding:2.2vh 3vw;gap:1.6vh}
+  header{display:flex;align-items:baseline;justify-content:space-between}
+  h1{margin:0;font-family:'Fredoka','Trebuchet MS',Arial,sans-serif;font-size:5.2vh;letter-spacing:.04em}
+  h1 span{color:var(--amber)}
+  .sub{color:var(--soft);font-size:2.4vh;font-weight:700}
+  .hpwrap{position:relative;height:6.5vh;background:#0c1630;border:.5vh solid var(--light);border-radius:3vh;overflow:hidden}
+  .hpfill{height:100%;width:100%;background:var(--green);transition:width 1.2s ease,background .6s}
+  .hptext{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:3.4vh;text-shadow:0 .3vh .6vh rgba(0,0,0,.6)}
+  main{flex:1;display:grid;grid-template-columns:1.25fr 1fr;gap:3vw;min-height:0}
+  .bossbox{position:relative;display:flex;align-items:center;justify-content:center;min-height:0}
+  .boss{width:100%;height:100%;max-height:60vh}
+  .bob{animation:bob 2.4s ease-in-out infinite}
+  .shake{animation:shake .6s linear 1}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+  @keyframes shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-18px) rotate(-3deg)}30%{transform:translateX(16px) rotate(3deg)}45%{transform:translateX(-12px)}60%{transform:translateX(10px)}80%{transform:translateX(-4px)}}
+  .float{position:absolute;left:50%;top:30%;font-family:'Fredoka',Arial,sans-serif;font-size:9vh;font-weight:900;color:var(--amber);text-shadow:0 .6vh 1vh rgba(0,0,0,.6);animation:rise 1.6s ease-out forwards;pointer-events:none}
+  @keyframes rise{0%{opacity:0;transform:translate(-50%,0) scale(.6)}15%{opacity:1;transform:translate(-50%,-2vh) scale(1.1)}100%{opacity:0;transform:translate(-50%,-16vh) scale(1)}}
+  .board{display:flex;flex-direction:column;gap:1.4vh;justify-content:center}
+  .stats{display:flex;gap:1.4vw}
+  .stat{flex:1;background:var(--navy2);border-radius:2vh;padding:1.4vh 1vw;text-align:center}
+  .stat b{display:block;font-family:'Fredoka',Arial,sans-serif;font-size:5vh;color:var(--teal)}
+  .stat span{color:var(--soft);font-size:2vh;font-weight:700}
+  .row{display:flex;align-items:center;gap:1vw;background:var(--navy2);border-radius:2vh;padding:1.1vh 1.2vw}
+  .row .nm{width:11vw;font-weight:800;font-size:2.6vh}
+  .row .bar{flex:1;height:3vh;background:#0c1630;border-radius:1.5vh;overflow:hidden}
+  .row .bar i{display:block;height:100%;background:var(--teal);width:0;transition:width 1s ease}
+  .row .ct{width:5vw;text-align:right;font-family:'Fredoka',Arial,sans-serif;font-size:3.2vh;font-weight:900}
+  .row.lead{outline:.4vh solid var(--amber)}
+  .ticker{min-height:7vh;display:flex;flex-direction:column;gap:.6vh;justify-content:flex-end}
+  .msg{font-size:2.8vh;font-weight:800;background:rgba(46,196,182,.18);border-left:1vh solid var(--teal);padding:.6vh 1.2vw;border-radius:1vh;animation:fade .5s}
+  .msg.crit{background:rgba(255,183,3,.2);border-left-color:var(--amber)}
+  @keyframes fade{from{opacity:0;transform:translateY(1vh)}to{opacity:1;transform:none}}
+  footer{display:flex;justify-content:space-between;color:#7e93bd;font-size:1.8vh}
+  .win{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:rgba(20,33,61,.9);text-align:center;z-index:5}
+  .win.on{display:flex}
+  .win h2{font-family:'Fredoka',Arial,sans-serif;font-size:12vh;margin:0;color:var(--amber)}
+  .win p{font-size:5vh;font-weight:800;margin:2vh 6vw}
+</style>
+</head>
+<body>
+<div class="stage">
+  <header>
+    <h1>THE <span>GUESSER</span></h1>
+    <div class="sub" id="sub">Land a hit with your data!</div>
+  </header>
+  <div class="hpwrap"><div class="hpfill" id="hpfill"></div><div class="hptext" id="hptext">HP</div></div>
+  <main>
+    <div class="bossbox"><div id="bossHost" style="width:100%;height:100%"></div></div>
+    <div class="board">
+      <div class="stats">
+        <div class="stat"><b id="sHits">0</b><span>Hits</span></div>
+        <div class="stat"><b id="sCrit">0</b><span>Legend crits</span></div>
+        <div class="stat"><b id="sDmg">0</b><span>Damage</span></div>
+      </div>
+      <div id="classes"></div>
+      <div class="ticker" id="ticker"></div>
+    </div>
+  </main>
+  <footer><span id="upd">Waiting for data...</span><span>Press D for demo mode</span></footer>
+</div>
+<div class="win" id="win"><h2>VICTORY!</h2><p id="winText"></p></div>
+
+<script>
+/* ====== TEACHER SETTINGS ====== */
+var SHEET_ID = "";            // paste the ID of the "Boss Battle Public" sheet (between /d/ and /edit in its address)
+var DATA_URL = "";            // optional: paste a published-to-web CSV link here instead of using SHEET_ID
+var CLASS_NAMES = ["Class 1","Class 2","Class 3","Class 4","Class 5","Class 6"];
+var REWARD_TEXT = "The whole grade earned the reward!";
+var POLL_SECONDS = 15;
+/* ================================ */
+
+function parseCSV(text){
+  var rows = [], row = [], cur = "", q = false;
+  for (var i = 0; i < text.length; i++){
+    var c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ cur += '"'; i++; } else q = false; } else cur += c;
+    } else {
+      if (c === '"') q = true;
+      else if (c === ',') { row.push(cur); cur = ""; }
+      else if (c === '\n' || c === '\r'){ if (c === '\r' && text[i+1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ""; }
+      else cur += c;
+    }
+  }
+  if (cur !== "" || row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+function toData(rows){
+  var d = {};
+  rows.forEach(function(r){ if (r.length >= 2 && r[0] && r[0] !== "key"){ var n = parseFloat(r[1]); d[r[0].trim()] = isNaN(n) ? 0 : n; } });
+  return d;
+}
+function stateFor(pct){
+  if (pct <= 0) return "ko";
+  if (pct > 75) return "full";
+  if (pct > 50) return "hurt";
+  if (pct > 25) return "weak";
+  return "almost";
+}
+function bossSVG(state){
+  var r = {full:100, hurt:98, weak:94, almost:90, ko:82}[state];
+  var cy = state === "ko" ? 215 : 185, cx = 200;
+  var s = '<svg class="boss" viewBox="0 0 400 380" xmlns="http://www.w3.org/2000/svg"><g id="bg">';
+  s += '<polygon points="'+(cx-r+22)+','+(cy-r+30)+' '+(cx-r-12)+','+(cy-r-45)+' '+(cx-r+58)+','+(cy-r+6)+'" fill="#FFB703"/>';
+  s += '<polygon points="'+(cx+r-22)+','+(cy-r+30)+' '+(cx+r+12)+','+(cy-r-45)+' '+(cx+r-58)+','+(cy-r+6)+'" fill="#FFB703"/>';
+  s += '<ellipse cx="'+(cx-r-6)+'" cy="'+(cy+35)+'" rx="30" ry="26" fill="#5834C8"/><ellipse cx="'+(cx+r+6)+'" cy="'+(cy+35)+'" rx="30" ry="26" fill="#5834C8"/>';
+  s += '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#7C4DFF" stroke="#5834C8" stroke-width="7"/>';
+  var ey = cy - 18, ex = 40;
+  if (state === "ko"){
+    [-1,1].forEach(function(k){ var x = cx + k*ex; s += '<path d="M'+(x-16)+','+(ey-16)+' L'+(x+16)+','+(ey+16)+' M'+(x-16)+','+(ey+16)+' L'+(x+16)+','+(ey-16)+'" stroke="#fff" stroke-width="8" stroke-linecap="round"/>'; });
+    s += '<path d="M'+(cx-30)+','+(cy+62)+' Q'+cx+','+(cy+34)+' '+(cx+30)+','+(cy+62)+'" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>';
+  } else {
+    var off = {full:0,hurt:3,weak:6,almost:9}[state];
+    [-1,1].forEach(function(k){ var x = cx + k*ex; s += '<circle cx="'+x+'" cy="'+ey+'" r="27" fill="#fff"/><circle cx="'+x+'" cy="'+(ey+off)+'" r="10" fill="#14213D"/>'; });
+    if (state === "full") s += '<polyline points="'+[0,1,2,3,4,5].map(function(i){ return (cx-45+i*18)+','+(cy+50+(i%2?12:-6)); }).join(' ')+'" stroke="#fff" stroke-width="7" fill="none" stroke-linejoin="round"/>';
+    else if (state === "hurt") s += '<line x1="'+(cx-34)+'" y1="'+(cy+52)+'" x2="'+(cx+34)+'" y2="'+(cy+52)+'" stroke="#fff" stroke-width="7" stroke-linecap="round"/>';
+    else s += '<path d="M'+(cx-34)+','+(cy+62)+' Q'+cx+','+(cy+36)+' '+(cx+34)+','+(cy+62)+'" stroke="#fff" stroke-width="7" fill="none" stroke-linecap="round"/>';
+  }
+  s += '<text x="'+cx+'" y="'+(cy-r+52)+'" text-anchor="middle" font-size="52" font-weight="900" fill="#FFB703" font-family="Arial">?</text>';
+  var cracks = {full:0,hurt:1,weak:2,almost:3,ko:3}[state];
+  for (var i = 0; i < cracks; i++){ var x = cx - 60 + i*60, y = cy + 10 + (i%2)*28; s += '<polyline points="'+x+','+y+' '+(x+16)+','+(y+16)+' '+(x+2)+','+(y+28)+'" stroke="#EB4646" stroke-width="6" fill="none"/>'; }
+  if (state !== "full" && state !== "ko") s += '<rect x="'+(cx+22)+'" y="'+(cy-78)+'" width="44" height="18" fill="#fff" rx="3"/>';
+  if (state === "ko"){ for (var a = 0; a < 5; a++){ var ang = a*72*Math.PI/180; s += '<text x="'+(cx+Math.round(130*Math.cos(ang)))+'" y="'+(cy-90+Math.round(46*Math.sin(ang)))+'" text-anchor="middle" font-size="42" fill="#FFB703" font-family="Arial">*</text>'; } }
+  s += '</g></svg>';
+  return s;
+}
+
+var last = null, shownState = null, queue = [];
+function $(id){ return document.getElementById(id); }
+function setBoss(state){
+  if (state === shownState) return;
+  shownState = state;
+  $("bossHost").innerHTML = bossSVG(state);
+  $("bossHost").firstChild.className.baseVal += (state === "ko" ? "" : " bob");
+}
+function hit(n){
+  var host = $("bossHost");
+  host.classList.remove("shake"); void host.offsetWidth; host.classList.add("shake");
+  var f = document.createElement("div"); f.className = "float"; f.textContent = "-" + n;
+  host.parentNode.appendChild(f); setTimeout(function(){ if (f.parentNode) f.parentNode.removeChild(f); }, 1700);
+}
+function say(text, crit){
+  var t = $("ticker"), m = document.createElement("div");
+  m.className = "msg" + (crit ? " crit" : ""); m.textContent = text; t.appendChild(m);
+  while (t.children.length > 3) t.removeChild(t.firstChild);
+}
+function apply(d){
+  var start = d.hp_start > 0 ? d.hp_start : 150;
+  var left = d.hp_left != null ? d.hp_left : start;
+  var pct = Math.max(0, Math.min(100, left / start * 100));
+  $("hpfill").style.width = pct + "%";
+  $("hpfill").style.background = pct > 50 ? "var(--green)" : (pct > 25 ? "var(--amber)" : "var(--red)");
+  $("hptext").textContent = "HP " + Math.round(left) + " / " + Math.round(start);
+  $("sHits").textContent = d.hits || 0; $("sCrit").textContent = d.legend || 0;
+  $("sDmg").textContent = (d.hits || 0) + 3 * (d.legend || 0);
+  var counts = CLASS_NAMES.map(function(n, i){ return d["class" + (i+1)] || 0; });
+  var max = Math.max.apply(null, counts), lead = max > 0 ? counts.indexOf(max) : -1;
+  var html = "";
+  counts.forEach(function(c, i){
+    html += '<div class="row' + (i === lead ? ' lead' : '') + '"><div class="nm">' + (i === lead ? '👑 ' : '') + CLASS_NAMES[i] + '</div><div class="bar"><i style="width:' + (max ? Math.max(c/max*100, c ? 6 : 0) : 0) + '%"></i></div><div class="ct">' + c + '</div></div>';
+  });
+  $("classes").innerHTML = html;
+  setBoss(stateFor(pct));
+  if (last){
+    var dmg = (last.leftSaved - left);
+    if (dmg > 0) hit(Math.round(dmg));
+    counts.forEach(function(c, i){ var prev = last["class" + (i+1)] || 0; if (c > prev) say(CLASS_NAMES[i] + " landed " + (c - prev > 1 ? (c - prev) + " hits" : "a hit") + "! 💥"); });
+    if ((d.legend || 0) > (last.legend || 0)) say("🔥 LEGEND CRITICAL HIT! 3 damage!", true);
+  }
+  d.leftSaved = left; last = d;
+  if (left <= 0){ $("winText").textContent = REWARD_TEXT; $("win").className = "win on"; } else { $("win").className = "win"; }
+  $("sub").textContent = left <= 0 ? "The Guesser is down!" : "Land a hit with your data!";
+  $("upd").textContent = "Updated " + new Date().toLocaleTimeString();
+}
+
+var demo = false, demoTimer = null, demoData = {hp_start:150, hits:0, legend:0};
+function demoStep(){
+  var d = JSON.parse(JSON.stringify(demoData));
+  var c = 1 + Math.floor(Math.random()*6); d["class"+c] = (demoData["class"+c] || 0) + 1; d.hits++;
+  if (Math.random() < .15){ d.legend++; }
+  d.hp_left = Math.max(0, 150 - d.hits - 3*d.legend);
+  demoData = d; apply(JSON.parse(JSON.stringify(d)));
+}
+function startDemo(){ demo = true; demoData = {hp_start:150, hits:0, legend:0}; last = null; shownState = null; clearInterval(demoTimer); demoStep(); demoTimer = setInterval(demoStep, 1500); }
+function stopDemo(){ demo = false; clearInterval(demoTimer); last = null; shownState = null; poll(); }
+
+function url(){
+  if (DATA_URL) return DATA_URL;
+  if (SHEET_ID) return "https://docs.google.com/spreadsheets/d/" + SHEET_ID + "/gviz/tq?tqx=out:csv&gid=0&t=" + Date.now();
+  return "";
+}
+function poll(){
+  if (demo) return;
+  var u = url();
+  if (!u){ $("upd").textContent = "No data link yet. Showing demo."; startDemo(); return; }
+  fetch(u, {cache:"no-store"}).then(function(r){ return r.text(); }).then(function(t){ apply(toData(parseCSV(t))); }).catch(function(){ $("upd").textContent = "Cannot reach the data. Check the settings."; });
+}
+document.addEventListener("keydown", function(e){ if (e.key === "d" || e.key === "D"){ demo ? stopDemo() : startDemo(); } });
+if (location.search.indexOf("demo") !== -1) startDemo(); else { poll(); setInterval(poll, POLL_SECONDS*1000); }
+</script>
+</body>
+</html>
